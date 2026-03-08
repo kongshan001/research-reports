@@ -9,8 +9,9 @@
 | 主题 | 描述 |
 |------|------|
 | [skill-creator-research](./skill-creator-research/README.md) | Anthropic AgentSkills 创建工具 |
-| [claude-code-bundled-skills](./claude-code-bundled-skills/README.md) | Claude Code 内置 5 个 Bundled Skills: /simplify, /batch, /debug, /loop, /claude-api |
-| [openclaw-builtin-skills](./openclaw-builtin-skills/README.md) | OpenClaw 内置 50+ Skills: coding-agent, gh-issues, github, healthcheck, notion, slack, tmux, weather 等 |
+| [claude-code-bundled-skills](./claude-code-bundled-skills/README.md) | Claude Code 内置 5 个 Bundled Skills |
+| [openclaw-builtin-skills](./openclaw-builtin-skills/README.md) | OpenClaw 内置 50+ Skills |
+| [claude-code-agent-teams](./claude-code-agent-teams/README.md) | Claude Code 多代理协作系统 |
 
 ### 🔄 调研中
 
