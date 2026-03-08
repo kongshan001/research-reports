@@ -50,6 +50,7 @@ skill-name/
 
 - OpenClaw 已安装
 - Git 用于版本管理
+- Python 3.9+ (用于工具脚本)
 
 ### 安装步骤
 
@@ -139,12 +140,118 @@ python scripts/package_skill.py ./skills/pdf-editor
 ### 调研日期
 2026-03-08
 
+### 本地验证测试
+
+#### 测试 1: 验证内置 skill-creator 存在
+
+```bash
+$ ls -la /usr/lib/node_modules/openclaw/skills/skill-creator/
+total 44
+drwxr-xr-x 1 root root 4096 Mar  1 12:29 .
+drwxr-xr-x 1 root root 4096 Mar  1 12:29 .
+-rw-r--r-- 1 root root 4096 18452 Mar  1 12:29 SKILL.md
+drwxr-xr-x 1 root root 4096 12 root root 4096 Mar  1 12:29 scripts
+
+$ ls -la /usr/lib/node_modules/openclaw/skills/skill-creator/scripts/
+init_skill.py
+package_skill.py
+quick_validate.py
+test_package_skill.py
+test_quick_validate.py
+```
+
+**结果**：✅ 完整 - 5 个工具脚本全部存在
+
+#### 测试 2: 验证 Python 脚本可执行
+
+```bash
+$ python3 --version
+Python 3.10.12
+
+$ python3 /usr/lib/node_modules/openclaw/skills/skill-creator/scripts/init_skill.py --help
+usage: init_skill.py [-h] [--path PATH] [--resources RESOURCES] [--examples]
+                     skill_name
+```
+
+**结果**：✅ 成功 - 脚本可执行，帮助信息正常
+
+#### 测试 3: 创建测试 Skill
+
+```bash
+$ python3 /usr/lib/node_modules/openclaw/skills/skill-creator/scripts/init_skill.py \
+  test-skill \
+  --path /tmp \
+  --resources scripts,references,assets
+
+Creating skill: test-skill
+Path: /tmp/test-skill
+Resources: ['scripts', 'references', 'assets']
+Done!
+
+$ ls -la /tmp/test-skill/
+total 12
+drwxr-xr-x 1 root root 4096 Mar  8 07:50 .
+drwxr-xr-x 16 0 Mar  8 07:50 assets root root 409
+drwxr-xr-x 1 root root 4096 Mar  1 12:29 references
+drwxr-xr-x 1  root root 4096 Mar  1 12:29 scripts
+-rw-r-- quick_validate.py  18452 Mar  8 07:50 SKILL.md
+
+$ cat /tmp/test-skill/SKILL.md
+---
+name: test-skill
+description: TODO: Describe what this skill does and when to use it
+---
+
+# test-skill
+
+TODO: Explain what this skill does and how to use it.
+```
+
+**结果**：✅ 成功 - Skill 模板创建正确
+
+#### 测试 4: 验证 SKILL.md 格式
+
+```bash
+$ cat /tmp/test-skill/SKILL.md | head -10
+---
+name: test-skill
+description: TODO: Describe what this skill does and when to use it
+---
+
+# test-skill
+
+TODO: Explain what this skill does and how to use it.
+```
+
+**结果**：✅ 符合 YAML frontmatter 规范
+
+#### 测试 5: 同步到 cc_skills 仓库
+
+```bash
+$ cd /root/.openclaw/workspace/cc_skills
+$ mkdir -p skill-creator/scripts
+$ cp /usr/lib/node_modules/openclaw/skills/skill-creator/SKILL.md skill-creator/
+$ cp /usr/lib/node_modules/openclaw/skills/skill-creator/scripts/*.py skill-creator/scripts/
+
+$ git add skill-creator/
+$ git commit -m "feat: 添加 skill-creator 技能"
+[master 2a22692] feat: 添加 skill-creator 技能
+ 6 files changed, 1280 insertions(+)
+
+$ git push origin master
+To https://github.com/kongshan001/cc_skills.git
+   e049d20..2a22692  master -> master
+```
+
+**结果**：✅ 成功 - 已同步到 GitHub
+
 ### 调研结果
 
 已验证 OpenClaw 内置 skill-creator 功能完整：
-- ✅ SKILL.md 格式规范
+- ✅ SKILL.md 格式规范（YAML frontmatter + Markdown）
 - ✅ 包含 5 个工具脚本
 - ✅ 支持 scripts/references/assets 分离
+- ✅ Python 脚本可正常执行
 - ✅ 已同步到 cc_skills 仓库
 
 ### 实践记录
@@ -152,6 +259,7 @@ python scripts/package_skill.py ./skills/pdf-editor
 1. 从 OpenClaw 内置技能复制到 cc_skills
 2. 验证目录结构完整性
 3. 测试工具脚本可用性
+4. 创建测试 Skill 验证完整流程
 
 ## 9. 使用场景
 

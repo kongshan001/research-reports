@@ -224,6 +224,68 @@ OpenClaw 内置 50+ Skills，覆盖多个领域：
 ### 调研日期
 2026-03-08
 
+### 本地验证测试
+
+#### 测试 1: weather Skill
+
+```bash
+$ curl -s "wttr.in/Shanghai?format=j1"
+```
+
+**结果**：✅ 成功
+
+```json
+{
+  "current_condition": [
+    {
+      "FeelsLikeC": "13",
+      "temp_C": "14",
+      "humidity": "41",
+      "winddir16Point": "ENE",
+      "windspeedKmph": "16",
+      "weatherDesc": [{"value": "Sunny"}]
+    }
+  ]
+}
+```
+
+#### 测试 2: github Skill
+
+```bash
+$ gh --version
+gh version 2.45.0
+
+$ gh auth status
+✓ Logged in to github.com account kongshan001
+
+$ gh repo view kongshan001/cc_skills --json name,description,stargazerCount
+{
+  "name": "cc_skills",
+  "description": "Claude Code Skills 实践指南",
+  "stargazerCount": 0
+}
+```
+
+**结果**：✅ 成功 - gh CLI 可用，认证正常
+
+#### 测试 3: coding-agent Skill
+
+```bash
+$ which codex || which claude || which opencode
+/usr/local/bin/claude
+```
+
+**结果**：✅ 部分成功 - Claude CLI 可用，Codex 不可用
+
+#### 测试 4: 列出可用 Skills
+
+```bash
+$ ls /usr/lib/node_modules/openclaw/skills/ | wc -l
+54
+```
+
+**结果**：✅ 成功 - 共 54 个内置 Skills
+
 ### 调研结果
 
 OpenClaw 内置 Skills 特点：
@@ -231,6 +293,7 @@ OpenClaw 内置 Skills 特点：
 - ✅ 深度集成 OpenClaw
 - ✅ 支持自定义 Skills 扩展
 - ✅ 部分 Skills 支持后台执行
+- ✅ 本地验证通过：weather、github、coding-agent 可用
 
 ### 推荐 Skills
 
