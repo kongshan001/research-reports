@@ -16,7 +16,10 @@
 
 ### 📋 待处理
 
-（暂无）
+| 主题 | 描述 |
+|------|------|
+| claude-code-bundled-skills | Claude Code 内置 5 个 Bundled Skills: /simplify, /batch, /debug, /loop, /claude-api |
+| openclow-builtin-skills | OpenClaw 内置 50+ Skills: 1password, apple-notes, blogwatcher, canvas, coding-agent, discord, gh-issues, github, healthcheck, mcporter, notion, obsidian, slack, tmux, weather 等 |
 
 ---
 
