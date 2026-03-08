@@ -32,6 +32,16 @@
 
 ## 📊 调研进度
 
-| 状态 | 主题 | 描述 |
-|------|------|------|
-| ✅ 已完成 | skill-creator | Anthropic AgentSkills 创建工具 |
+### ✅ 已完成
+
+| 主题 | 描述 |
+|------|------|
+| skill-creator-research | Anthropic AgentSkills 创建工具 |
+
+### 🔄 调研中
+
+（暂无）
+
+### 📋 待处理
+
+（暂无）
