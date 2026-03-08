@@ -12,6 +12,7 @@
 | [claude-code-bundled-skills](./claude-code-bundled-skills/README.md) | Claude Code 内置 5 个 Bundled Skills |
 | [openclaw-builtin-skills](./openclaw-builtin-skills/README.md) | OpenClaw 内置 50+ Skills |
 | [claude-code-agent-teams](./claude-code-agent-teams/README.md) | Claude Code 多代理协作系统 |
+| [refly-skills](./refly-skills/README.md) | Refly Skills - 首个开源 Agent Skills 构建平台 |
 
 ### 🔄 调研中
 
