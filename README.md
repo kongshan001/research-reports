@@ -15,6 +15,7 @@
 | [refly-skills](./refly-skills/README.md) | Refly Skills - 首个开源 Agent Skills 构建平台 |
 | [renderdoc-mcp](./renderdoc-mcp/README.md) | RenderDoc MCP - AI 图形调试工具 |
 | [unity-rendergraph](./unity-rendergraph/README.md) | Unity RenderGraph - 自动化渲染管线 |
+| [claude-code-chrome](./claude-code-chrome/README.md) | Claude Code Chrome 集成 - 浏览器自动化 |
 
 ### 🔄 调研中
 
