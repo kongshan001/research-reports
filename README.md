@@ -13,6 +13,7 @@
 | [openclaw-builtin-skills](./openclaw-builtin-skills/README.md) | OpenClaw 内置 50+ Skills |
 | [claude-code-agent-teams](./claude-code-agent-teams/README.md) | Claude Code 多代理协作系统 |
 | [refly-skills](./refly-skills/README.md) | Refly Skills - 首个开源 Agent Skills 构建平台 |
+| [renderdoc-mcp](./renderdoc-mcp/README.md) | RenderDoc MCP - AI 图形调试工具 |
 
 ### 🔄 调研中
 
