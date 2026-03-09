@@ -16,6 +16,7 @@
 | [renderdoc-mcp](./renderdoc-mcp/README.md) | RenderDoc MCP - AI 图形调试工具 |
 | [unity-rendergraph](./unity-rendergraph/README.md) | Unity RenderGraph - 自动化渲染管线 |
 | [claude-code-chrome](./claude-code-chrome/README.md) | Claude Code Chrome 集成 - 浏览器自动化 |
+| [slack-gif-creator](./slack-gif-creator/README.md) | Slack GIF Creator - Slack GIF 创建技能 |
 
 ### 🔄 调研中
 
