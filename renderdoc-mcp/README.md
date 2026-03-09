@@ -10,7 +10,7 @@
 
 - 让 AI 助手能够直接访问 RenderDoc 的捕获数据
 - 提供自然语言接口来查询图形调试信息
-- 支持ドローコール分析、シェーダー检查、テクスチャ/バッファ数据获取
+- 支持绘制调用分析、着色器检查、纹理/缓冲区数据获取
 
 ## 3. 设计方案
 
@@ -37,9 +37,9 @@ RenderDoc Process (Extension)
 | 工具 | 功能 |
 |------|------|
 | get_capture_status | 获取捕获文件加载状态 |
-| get_draw_calls | 获取ドローコール列表（层级结构） |
-| get_draw_call_details | 获取特定ドローコール详情 |
-| get_shader_info | 获取シェーダー源码和常量缓冲 |
+| get_draw_calls | 获取绘制调用列表（层级结构） |
+| get_draw_call_details | 获取特定绘制调用详情 |
+| get_shader_info | 获取着色器源码和常量缓冲 |
 | get_buffer_contents | 获取缓冲内容（Base64） |
 | get_texture_info | 获取纹理元数据 |
 | get_texture_data | 获取纹理像素数据（Base64） |
@@ -91,13 +91,13 @@ uv tool install .
 ### 使用示例
 
 ```python
-# 获取所有ドローコール
+# 获取所有绘制调用
 get_draw_calls(include_children=True)
 
-# 获取特定事件的シェーダー信息
+# 获取特定事件的着色器信息
 get_shader_info(event_id=123, stage="pixel")
 
-# 获取パイプライン状态
+# 获取管线状态
 get_pipeline_state(event_id=123)
 
 # 获取纹理数据（指定mip级别）
@@ -109,16 +109,16 @@ get_buffer_contents(resource_id="ResourceId::123", offset=256, length=512)
 
 ### 典型场景
 
-1. **渲染问题排查**: "为什么这个物体没有渲染？" → AI 分析ドローコール和パイプライン状态
-2. **シェーダー调试**: "这个纹理为什么是黑的？" → AI 检查シェーダー代码和常量缓冲
-3. **性能优化**: "哪个ドローコール最耗时？" → AI 列出所有调用及其状态
+1. **渲染问题排查**: "为什么这个物体没有渲染？" → AI 分析绘制调用和管线状态
+2. **着色器调试**: "这个纹理为什么是黑的？" → AI 检查着色器代码和常量缓冲
+3. **性能优化**: "哪个绘制调用最耗时？" → AI 列出所有调用及其状态
 
 ## 6. 优缺点分析
 
 ### 优点
 
 - ✅ AI 直接交互，无需手动在 RenderDoc UI 中搜索
-- ✅ 支持全面的图形数据查询（ドローコール、シェーダー、テクスチャ、バッファ）
+- ✅ 支持全面的图形数据查询（绘制调用、着色器、纹理、缓冲区）
 - ✅ 使用 FastMCP 2.0，现代化架构
 - ✅ 支持多平台潜力（虽目前仅 Windows + DirectX 11 验证）
 
