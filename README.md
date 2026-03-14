@@ -19,7 +19,6 @@
 | [slack-gif-creator](./slack-gif-creator/README.md) | Slack GIF Creator - Slack GIF 创建技能 |
 | [game-vfx](./game-vfx/README.md) | 游戏表现技术方案调研 - 2D地图/3D战斗场景的程序化实现 |
 | [game-visual-effects](./game-visual-effects.md) | 游戏表现技术方案调研报告（精简版） |
-| [SKILLS_SURVEY_2026_03_PERMISSION_MODES](./SKILLS_SURVEY_2026_03_PERMISSION_MODES.md)
 | [SKILLS_SURVEY_2026_03_PERMISSION_MODES](./SKILLS_SURVEY_2026_03_PERMISSION_MODES.md) | OpenClaw vs Claude Code 权限模式深度调研 |
 
 ### 🔄 调研中
