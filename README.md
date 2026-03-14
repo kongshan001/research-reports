@@ -17,7 +17,8 @@
 | [unity-rendergraph](./unity-rendergraph/README.md) | Unity RenderGraph - 自动化渲染管线 |
 | [claude-code-chrome](./claude-code-chrome/README.md) | Claude Code Chrome 集成 - 浏览器自动化 |
 | [slack-gif-creator](./slack-gif-creator/README.md) | Slack GIF Creator - Slack GIF 创建技能 |
-| [SKILLS_SURVEY_2026_03_PERMISSION_MODES](./SKILLS_SURVEY_2026_03_PERMISSION_MODES.md) | OpenClaw vs Claude Code 权限模式深度调研 - 对比 `dangerously-skip-permissions` 与 OpenClaw workspaceOnly/security/ask 配置 |
+| [game-visual-effects](./game-visual-effects.md) | 游戏表现技术方案调研报告 - 2D地图/3D战斗场景的程序化实现，着色器/粒子系统/后处理技术 |
+| [SKILLS_SURVEY_2026_03_PERMISSION_MODES](./SKILLS_SURVEY_2026_03_PERMISSION_MODES.md) | OpenClaw vs Claude Code 权限模式深度调研 |
 
 ### 🔄 调研中
 
