@@ -201,21 +201,30 @@ function readAllTasks() {
 
 ---
 
-#### Bug #5 [中等] 自迭代时 iteration 不递增
+#### Bug #5 [中等] 自迭代时 iteration 不递增 + phase_lock 未更新 + 目录断裂
 
 | 项目 | 详情 |
 |------|------|
-| **位置** | `workflow.sh` `workflow_transition()` 函数 |
-| **现象** | `user_decision → plan` 自迭代后 iteration 仍为 1（应为 2） |
-| **根因** | `jq_extra` 仅在 `iteration == 0` 时设 `.iteration=1`，后续迭代无处理 |
-| **影响** | 所有迭代的报告目录始终为 `iteration-1`，历史被覆盖 |
-| **注意** | `workflow_start_iteration()` 中有递增逻辑，但它不在 transition 链路中 |
+| **位置** | `workflow.sh` `workflow_transition()` + `workflow_start_iteration()` |
+| **现象** | 自迭代后 iteration 不递增、phase_lock 停在 evaluate、Guard 在 iteration-2 找不到报告 |
+| **根因** | 三重问题叠加：① `jq_extra` 仅在 `iteration == 0` 时设 `.iteration=1`；② `workflow_start_iteration` 设 next_phase 但不执行 transition；③ iteration 变 2 后 Guard 在新目录找不到上一轮的报告 |
+| **影响** | 自迭代完全不可用：phase_lock 锁死、目录断裂、所有后续转换被 Guard 拦截 |
 
-**修复**: 在 `workflow_transition` 中追加:
+**修复**（3步）:
 ```bash
+# 1. workflow_transition 中递增 iteration
 if [ "$to_phase" = "plan" ] && [ "$from_phase" != "" ]; then
   jq_extra=".iteration=(.iteration+1) | $jq_extra"
 fi
+
+# 2. workflow_start_iteration hot 类型应实际执行 transition
+if [ "$type" = "hot" ]; then
+  workflow_transition "$task_id" "execute"
+fi
+
+# 3. hot iteration 的评估应沿用上一轮结果
+# 方案A: symlink iteration-1 的报告到 iteration-2
+# 方案B: Guard 在 evaluate 时检查上一 iteration 的报告
 ```
 
 ---
@@ -268,7 +277,40 @@ user_decision) case "$to" in archive|plan) return 0 ;; esac ;;
 
 ---
 
-#### Bug #10 [低] `framework_self_assess` 无参数时报错不友好
+#### Bug #10 [中等] designer 角色 risks 空数组被 Guard 拒绝
+
+| 项目 | 详情 |
+|------|------|
+| **位置** | `guard.sh` `guard_check_evaluation()` |
+| **现象** | designer 评估无 UI 场景时 risks 自然为空，但 Guard 要求所有角色的 `risks.length > 0` |
+| **影响** | 纯后端/API 类任务无法通过评估，强制进入无意义迭代 |
+| **修复** | risks 和 improvements 空数组只对核心角色（code_reviewer/qa）强制，designer N/A 场景豁免 |
+
+---
+
+#### Bug #11 [中等] kanban_archive_task 归档失败静默继续
+
+| 项目 | 详情 |
+|------|------|
+| **位置** | `kanban.sh` `kanban_archive_task()` |
+| **现象** | `mv` 报 TASK-001 not found（路径计算问题），但没有 return 1，流程继续 |
+| **影响** | 任务仍留在 tasks/ 目录，archive/ 为空，index.json 未正确更新 |
+| **修复** | 加 `set -e` 或每步检查返回值，mv 失败时 return 1 |
+
+---
+
+#### Bug #12 [中等] kanban_decide 只记录 decision 不执行 transition
+
+| 项目 | 详情 |
+|------|------|
+| **位置** | `kanban.sh` `kanban_decide()` |
+| **现象** | decide 后 task.status 仍是 `evaluating`，没有 transition 到 `user_decision` |
+| **影响** | 用户 decide 了但框架状态不变，后续 archive 依赖 status 检查会出问题 |
+| **修复** | `kanban_decide` 在记录 decision 后应执行 `workflow_transition` |
+
+---
+
+#### Bug #13 [低] `framework_self_assess` 无参数时报错不友好
 
 | 项目 | 详情 |
 |------|------|
@@ -430,6 +472,57 @@ kanban_update_task() {
 
 应合并为一个，避免行为不一致。
 
+#### 问题 H: 无 CLI 入口 [设计缺陷]
+
+**现状**: 所有操作都要先 `source` lib 再 `bash -c` 调用函数。SKILL.md 定义了命令路由（如 `/kanban init`），但没有编译成可执行入口。Claude Code 的 Agent 机制可以解读 SKILL.md 并调用 bash 函数，但在 CLI 环境中无法独立使用。
+
+**对比**: agent-kanban 提供 `kanban task auto --run-agent` 一键推进，有 Python typer CLI 入口。
+
+**建议**: 加一个 `kanban` bash 脚本作为统一入口：
+```bash
+#!/usr/bin/env bash
+SKILL_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SKILL_DIR/lib/kanban.sh"
+kanban_init_env >/dev/null 2>&1
+# 解析子命令并调用对应函数
+```
+
+#### 问题 I: 评估无 LLM 落地 [设计缺陷]
+
+**现状**: `evaluator_prepare_all` 只生成 dispatch JSON，不调用任何 LLM。实际评估依赖 Claude Code Agent 执行 SKILL.md 中的 prompt，但在 CLI 测试或非 Claude Code 环境中完全无法运行。
+
+**对比**: agent-kanban 的 `_call_llm` 有 claude/hermes/opencode fallback 链，可在多种环境下调用 LLM。
+
+**建议**: 从 agent-kanban 移植 LLM fallback 链逻辑，Bash 中通过 CLI 调用 claude/hermes 命令。
+
+#### 问题 J: 并行调度器无法独立运行 [设计缺陷]
+
+**现状**: `scheduler_run` 定义了 poll 主循环，但没有守护进程化。在 Bash 中实现 `while true; sleep; done` 循环不够健壮，进程管理（启动/停止/重启）需要外部工具。
+
+**建议**: 
+1. 短期：提供 `scheduler_run --once` 单次调度模式（不进入循环）
+2. 长期：考虑用 Python 重写调度器，支持后台运行和信号处理
+
+#### 问题 K: 两个项目合并建议
+
+kanban-framework 和 agent-kanban 有大量互补优势：
+
+| 能力 | kanban-framework | agent-kanban |
+|------|:---:|:---:|
+| 三层 Guard 防护 | ✅ | ❌ |
+| Plan 质量门禁 | ✅ | ❌ |
+| 框架自评估 | ✅ | ❌ |
+| 并行调度 | ✅ | ❌ |
+| Dashboard 可视化 | ✅ | ❌ |
+| 知识沉淀 | ✅ | ❌ |
+| pip 安装 | ❌ | ✅ |
+| LLM fallback 链 | ❌ | ✅ |
+| auto 一键推进 | ❌ | ✅ |
+| CLI 入口 | ❌ | ✅ |
+| 实际 LLM 调用 | ❌ | ✅ |
+
+**建议**: 用 Python 重写核心，Bash lib 作为 fallback。保留 framework 的三层约束 + 并行调度 + Dashboard + 知识沉淀，移植 agent-kanban 的 pip 安装 + LLM fallback + auto 一键推进。
+
 ### 3.3 性能分析
 
 **index.json 更新开销**: 每次任务状态变更都会触发 `_update_index`（遍历所有 task 目录 + 2 次 jq 调用/任务 + 1 次 jq -n 合并）。100 个任务时约 200 次 jq 调用。建议改为懒更新或直接删除 index.json。
@@ -532,14 +625,18 @@ kanban_update_task() {
 | 编号 | 改善项 | 详情 |
 |------|--------|------|
 | Bug #4 | 模板文件名统一 | 重命名为下划线或修改代码 |
-| Bug #5 | iteration 递增修复 | workflow_transition 增加递增逻辑 |
+| Bug #5 | iteration 递增 + phase_lock + 目录断裂 | 自迭代三重修复 |
 | Bug #6 | 测试适配新格式 | get_latest_task_id 改用 task_dir |
+| Bug #10 | Guard 评估灵活性 | risks 空数组只对核心角色强制 |
+| Bug #11 | 归档失败检查 | kanban_archive_task 每步检查返回值 |
+| Bug #12 | decide 执行 transition | kanban_decide 后执行 workflow_transition |
 | 改善 A | 显式加载顺序 | 替代 glob source |
 | 改善 C | 删除 index.json | Dashboard 改为直接扫描 |
 | 改善 F | 并发安全 | task.json 写入加 flock |
+| 改善 H | CLI 入口 | 添加 kanban bash 统一入口脚本 |
 | 新增 | 集成测试 | 完整 FSM 生命周期 + 多任务并行 |
 
-### Phase 3: v0.5.0 — 架构优化（2周）
+### Phase 3: v0.5.0 — 架构优化 + 项目合并（2周）
 
 | 编号 | 改善项 | 详情 |
 |------|--------|------|
@@ -547,12 +644,67 @@ kanban_update_task() {
 | 改善 D | 统一 Agent schema | 定义 JSON Schema 并在 guard 中验证 |
 | 改善 E | 错误处理标准化 | 定义 kanban_error/kanban_guard 函数 |
 | 改善 G | 合并重复函数 | self_improve_check 二选一 |
+| 改善 I | LLM 评估落地 | 从 agent-kanban 移植 fallback 链 |
+| 改善 J | 调度器守护进程化 | scheduler_run --once 单次模式 |
+| 改善 K | 与 agent-kanban 合并 | Python 重写核心，Bash fallback |
 | 新增 | worktree 冲突处理 | merge 前检测冲突，提供解决选项 |
 | 新增 | 性能优化 | bc 替换为整数比较，减少 jq 调用次数 |
 
 ---
 
-## 七、总评
+## 七、二次落地验证（独立验证补充）
+
+> 以下发现来自独立的落地验证测试，补充了源码分析中未覆盖的实际运行时问题。
+
+### 验证流程
+
+```
+init → create task → worktree → plan → execute → evaluate → self-improve (hot) → decide → archive
+```
+
+每个环节手动执行，发现 **8 个 Bug + 4 个设计缺陷**。其中 6 个 Bug 与源码分析重叠，以下补充源码分析未覆盖的新发现：
+
+### 7.1 新增 Bug
+
+#### NB-1: Hot iteration 后 phase_lock 未更新
+
+`workflow_start_iteration` 设置 `type=hot`、`next_phase=execute`，但没有实际执行 `workflow_transition`。导致 phase_lock 停在 `evaluate`，后续所有转换被 Guard 拦截，自迭代流程完全卡死。
+
+#### NB-2: iteration 目录断裂
+
+iteration 从 1 变 2 后，evaluate 的 Guard 在 `iteration-2/` 目录查找报告，但 hot iteration 不重新评估，报告仍在 `iteration-1/`。导致 Guard 拦截，进入死循环。
+
+#### NB-3: kanban_archive_task 归档失败静默继续
+
+`mv` 操作报 "TASK-001 not found"（路径计算问题），但没有 return 1，流程继续。任务仍留在 tasks/ 目录，archive/ 为空，index.json 未更新。
+
+#### NB-4: kanban_decide 只记录不执行转换
+
+`kanban_decide` 写入 `user_decision` 字段但不触发 `workflow_transition`。decide 后 status 仍是 `evaluating`，后续 archive 依赖 status 检查必然失败。
+
+### 7.2 新增设计缺陷
+
+#### ND-1: 评估无 LLM 落地
+
+`evaluator_prepare_all` 只生成 dispatch JSON，不调用任何 LLM。实际评估依赖 Claude Code Agent 执行，CLI 测试时完全无法运行。agent-kanban 的 claude/hermes/opencode fallback 链更实用。
+
+#### ND-2: 并行调度器无法独立运行
+
+`scheduler_run` 的 poll 循环在 Bash 中不够健壮，无守护进程化、无信号处理。
+
+### 7.3 表现良好的部分
+
+| 功能 | 评价 |
+|------|------|
+| 三层 Guard 约束 | 🔥 有效拦截了所有非法转换 |
+| Plan 质量门禁 | ✅ 4 维度打分（8.75/10），准确定位了"缺少技术约束" |
+| 框架自评估 | ✅ 自动创建改进任务 + 知识沉淀 |
+| Hot/Full 迭代判断 | ✅ 最低分 ≥ 7.0 + 无架构问题 = hot，逻辑合理 |
+| Worktree 校验 | ✅ JSON 诊断输出（errors + warnings），非常清晰 |
+
+---
+
+## 八、总评
 
 | 维度 | 评分(1-5) | 说明 |
 |------|-----------|------|
@@ -566,9 +718,9 @@ kanban_update_task() {
 
 ### 核心结论
 
-**kanban-framework 是目前见过的最完整的 Claude Code 任务编排框架。** 它的 FSM + Guard 三层防护 + 多角色评估设计，解决了 Agent 编排中最关键的质量保证问题。
+**kanban-framework 的架构设计远超 agent-kanban**（三层 Guard、Plan 质量门禁、框架自评估、并行调度、Dashboard 都是真功夫），但**工程完成度不足**——归档流程、hot iteration、LLM 调用这些关键路径都有 bug。
 
-v0.3.0 存在 3 个严重 Bug（index 覆盖、Dashboard 新格式不兼容、Agent 路径过时），这些是新旧格式迁移不彻底导致的。修复后框架即可用于生产环境。
+两轮独立验证（源码分析 + 落地测试）共发现 **13 个 Bug + 5 个设计缺陷**。其中 3 个严重 Bug 阻塞基本使用，4 个中等 Bug 影响自迭代和归档流程。
 
 **推荐的框架使用模式**:
 1. 单 Agent 简单任务 → 直接用 Claude Code，不需要 kanban
@@ -598,5 +750,15 @@ Dashboard: 19/19 API 测试通过
 | 严重性 | 数量 | 编号 |
 |--------|------|------|
 | 🔴 严重 | 3 | #1 index覆盖, #2 Dashboard, #3 Agent路径 |
-| 🟡 中等 | 3 | #4 模板文件名, #5 iteration不递增, #6 测试失败 |
-| 🟢 低 | 4 | #7 CHANGELOG注释, #8 转换漏洞, #9 sed格式, #10 无参数报错 |
+| 🟡 中等 | 7 | #4 模板文件名, #5 自迭代三重问题, #6 测试失败, #10 risks空数组, #11 归档静默失败, #12 decide不transition |
+| 🟢 低 | 3 | #7 CHANGELOG注释, #8 转换漏洞, #9 sed格式, #13 无参数报错 |
+
+### C. 设计缺陷汇总
+
+| 编号 | 缺陷 | 优先级 |
+|------|------|--------|
+| D1 | Bash 加载顺序强耦合 | P1 |
+| D2 | 无 CLI 入口 | P1 |
+| D3 | 评估无 LLM 落地 | P2 |
+| D4 | 并行调度器无法独立运行 | P2 |
+| D5 | 两个项目应合并 | P3 |
